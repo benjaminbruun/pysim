@@ -35,7 +35,7 @@ from pySim.sms import SMS_DELIVER, SMS_SUBMIT, AddressField
 
 from pySim.transport import LinkBase, ProactiveHandler, argparse_add_reader_args, init_reader
 from pySim.commands import SimCardCommands
-from pySim.cards import UsimCard
+from pySim.cards import UiccCardBase
 from pySim.exceptions import *
 from pySim.cat import ProactiveCommand, SendShortMessage, SMS_TPDU, SMSPPDownload
 from pySim.cat import DeviceIdentities, Address
@@ -150,8 +150,8 @@ class MyServer:
     def connect_to_card(self, tp: LinkBase):
         self.tp = tp
         self.scc = SimCardCommands(self.tp)
-        self.card = UsimCard(self.scc)
-        # this should be part of UsimCard, but FairewavesSIM breaks with that :/
+        self.card = UiccCardBase(self.scc)
+        # this should be part of UiccCardBase, but FairewavesSIM breaks with that :/
         self.scc.cla_byte = "00"
         self.scc.sel_ctrl = "0004"
         self.card.read_aids()
