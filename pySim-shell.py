@@ -688,8 +688,22 @@ class PySimCommands(CommandSet):
         exception_str_add = ""
 
         if opts.filename:
+            # export only that one specified file
             self.export_ef(opts.filename, context, **kwargs_export)
         else:
+            # export an entire subtree
+            if self._cmd.lchan.selected_file == self._cmd.lchan.selected_file.get_mf():
+                # if we're exporting whole card (from MF), also export application state
+                mf = self._cmd.lchan.selected_file
+                try:
+                    for app in self._cmd.rs.profile.applications:
+                        app.export(self._cmd, context, **kwargs_export)
+                except Exception as e:
+                    print("# Exception %s during export of applications" % (str(e)))
+                    print("#")
+                finally:
+                    # rewind back to MF
+                    self._cmd.lchan.select_file(mf)
             try:
                 self.walk(0, self.export_ef, None, context, **kwargs_export)
             except Exception as e:

@@ -1320,6 +1320,10 @@ class CardApplication:
         """
         return interpret_sw(self.sw, sw)
 
+    def export(self, cmd, context, **kwargs):
+        """Method called to export the state of the application during pySim-shell 'export' command."""
+        cmd.poutput("# application: %s" % (self.name))
+
 
 class CardModel(abc.ABC):
     """A specific card model, typically having some additional vendor-specific files. All

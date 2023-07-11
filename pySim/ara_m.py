@@ -410,3 +410,9 @@ sw_aram = {
 class CardApplicationARAM(CardApplication):
     def __init__(self):
         super().__init__('ARA-M', adf=ADF_ARAM(), sw=sw_aram)
+
+    def export(self, cmd, context, **kwargs):
+        cmd.lchan.select_file(self.adf)
+        res_do = ADF_ARAM.get_all(cmd.card._scc._tp)
+        if res_do:
+            cmd.poutput_json(res_do.to_dict())
