@@ -181,10 +181,10 @@ class MyServer:
             return pdu_types.CommandStatus.ESME_RINVDCS
 
         # 1) build a SMS-DELIVER (!) from the SMPP-SUBMIT
-        tpdu = SMS_DELIVER.fromSmppSubmit(pdu)
+        tpdu = SMS_DELIVER.from_smpp_submit(pdu)
         print(tpdu)
         # 2) wrap into the CAT ENVELOPE for SMS-PP-Download
-        tpdu_ie = SMS_TPDU(decoded={'tpdu': b2h(tpdu.toBytes())})
+        tpdu_ie = SMS_TPDU(decoded={'tpdu': b2h(tpdu.to_bytes())})
         dev_ids = DeviceIdentities(decoded={'source_dev_id': 'network', 'dest_dev_id': 'uicc'})
         sms_dl = SMSPPDownload(children=[dev_ids, tpdu_ie])
         # 3) send to the card
