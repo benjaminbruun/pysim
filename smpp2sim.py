@@ -33,7 +33,7 @@ from smpp.pdu import pdu_types, operations, pdu_encoding
 
 from pySim.sms import SMS_DELIVER, SMS_SUBMIT, AddressField
 
-from pySim.transport import LinkBase, ProactiveHandler, argparse_add_reader_args, init_reader
+from pySim.transport import LinkBase, ProactiveHandler, argparse_add_reader_args, init_reader, ApduTracer
 from pySim.commands import SimCardCommands
 from pySim.cards import UiccCardBase
 from pySim.exceptions import *
@@ -51,9 +51,14 @@ ESME_MSISDN='12'
 # or actually route based on MSISDNs
 hackish_global_smpp = None
 
+class MyApduTracer(ApduTracer):
+    def trace_response(self, cmd, sw, resp):
+        print("-> %s %s" % (cmd[:10], cmd[10:]))
+        print("<- %s: %s" % (sw, resp))
+
 class Proact(ProactiveHandler):
-    def __init__(self, smpp_factory):
-        self.smpp_factory = smpp_factory
+    #def __init__(self, smpp_factory):
+    #    self.smpp_factory = smpp_factory
 
     @staticmethod
     def _find_first_element_of_type(instlist, cls):
@@ -66,6 +71,7 @@ class Proact(ProactiveHandler):
     proactive command from the SIM."""
     def handle_SendShortMessage(self, data):
         """Card requests sending a SMS."""
+        print("SendShortMessage")
         pp(data)
         # Relevant parts in data: Address, SMS_TPDU
         addr_ie = Proact._find_first_element_of_type(data.children, Address)
@@ -75,21 +81,26 @@ class Proact(ProactiveHandler):
         self.send_sms_via_smpp(data)
     def handle_OpenChannel(self, data):
         """Card requests opening a new channel via a UDP/TCP socket."""
+        print("OpenChannel")
         pp(data)
         pass
     def handle_CloseChannel(self, data):
+        print("CloseChannel")
         """Close a channel."""
         pp(data)
         pass
     def handleReceiveData(self, data):
+        print("ReceiveData")
         """Receive/read data from the socket."""
         pp(data)
         pass
     def handleSendData(self, data):
+        print("SendData")
         """Send/write data to the socket."""
         pp(data)
         pass
     def getChannelStatus(self, data):
+        print("GetChannelStatus")
         pp(data)
         pass
 
@@ -185,17 +196,20 @@ class MyServer:
         print(tpdu)
         # 2) wrap into the CAT ENVELOPE for SMS-PP-Download
         tpdu_ie = SMS_TPDU(decoded={'tpdu': b2h(tpdu.to_bytes())})
+        addr_ie = Address(decoded={'ton_npi': 0x00, 'call_number': '0123456'})
         dev_ids = DeviceIdentities(decoded={'source_dev_id': 'network', 'dest_dev_id': 'uicc'})
-        sms_dl = SMSPPDownload(children=[dev_ids, tpdu_ie])
+        # TODO: Address is mandatory!
+        sms_dl = SMSPPDownload(children=[dev_ids, addr_ie, tpdu_ie])
+        #sms_dl = SMSPPDownload(children=[dev_ids, tpdu_ie])
         # 3) send to the card
         envelope_hex = b2h(sms_dl.to_tlv())
         print("ENVELOPE: %s" % envelope_hex)
         (data, sw) = self.scc.envelope(envelope_hex)
         print("SW %s: %s" % (sw, data))
-        if sw == '9300':
+        if sw in ['9200', '9300']:
             # TODO send back RP-ERROR message with TP-FCS == 'SIM Application Toolkit Busy'
             return pdu_types.CommandStatus.ESME_RSUBMITFAIL
-        elif sw == '9000' or sw[0:2] in ['6f', '62', '63']:
+        elif sw == '9000' or sw[0:2] in ['6f', '62', '63'] and len(data):
             # data something like 027100000e0ab000110000000000000001612f or
             # 027100001c12b000119660ebdb81be189b5e4389e9e7ab2bc0954f963ad869ed7c
             # which is the user-data portion of the SMS starting with the UDH (027100)
@@ -233,11 +247,12 @@ if __name__ == '__main__':
 
     opts = option_parser.parse_args()
 
-    #tp = init_reader(opts, proactive_handler = Proact())
-    tp = init_reader(opts)
+    tp = init_reader(opts, proactive_handler = Proact())
+    #tp = init_reader(opts)
     if tp is None:
         exit(1)
     tp.connect()
+    tp.apdu_tracer = MyApduTracer()
 
     ms = MyServer(opts.smpp_bind_port, opts.smpp_bind_ip)
     ms.connect_to_card(tp)
