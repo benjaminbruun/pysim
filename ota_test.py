@@ -41,10 +41,10 @@ OTA_KEYSET_SJA5_SAMPLES = OtaKeyset(algo_crypt='triple_des_cbc2', kic_idx=3,
                                     kic=h2b('300102030405060708090a0b0c0d0e0f'),
                                     kid=h2b('301102030405060708090a0b0c0d0e0f'))
 
-OTA_KEYSET_SJA5_AES128 = OtaKeyset(algo_crypt='aes_cbc', kic_idx=3,
-                                   algo_auth='aes_cmac', kid_idx=3,
-                                   kic=h2b('300102030405060708090a0b0c0d0e0f'),
-                                   kid=h2b('301102030405060708090a0b0c0d0e0f'))
+OTA_KEYSET_SJA5_AES128 = OtaKeyset(algo_crypt='aes_cbc', kic_idx=2,
+                                   algo_auth='aes_cmac', kid_idx=2,
+                                   kic=h2b('200102030405060708090a0b0c0d0e0f'),
+                                   kid=h2b('201102030405060708090a0b0c0d0e0f'))
 
 # TODO: AES192
 # TODO: AES256
@@ -92,11 +92,11 @@ testcases = [
             'spi': SPI_CC_POR_CIPHERED_CC,
             'request': {
                 'apdu': b'\x00\xa4\x00\x04\x02\x3f\x00',
-                'encoded_cmd': '00201506193535b00011ae733256918d050b87c94fbfe12e4dc402f262c41cf67f2f',
-                'encoded_tpdu': '400881214365877ff6227052000000000302700000201506193535b00011ae733256918d050b87c94fbfe12e4dc402f262c41cf67f2f',
+                'encoded_cmd': '00281506192222b00011e87cceebb2d93083011ce294f93fc4d8de80da1abae8c37ca3e72ec4432e5058',
+                'encoded_tpdu': '400881214365877ff6227052000000000302700000281506192222b00011e87cceebb2d93083011ce294f93fc4d8de80da1abae8c37ca3e72ec4432e5058',
                 },
             'response': {
-                'encoded_resp': '027100001c12b000118bb989492c632529326a2f4681feb37c825bc9021c9f6d0b',
+                'encoded_resp': '027100002412b00011ebc6b497e2cad7aedf36ace0e3a29b38853f0fe9ccde81913be5702b73abce1f',
                 }
         }
     ]
