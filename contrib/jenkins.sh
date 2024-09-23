@@ -32,6 +32,9 @@ case "$JOB_TYPE" in
 	# Execute automatically discovered unit tests first
 	python -m unittest discover -v -s tests/unittests
 
+	# Run card sanitizer to reset all cards into a defined state
+	tests/card_sanitizer/card_sanitizer.py
+
 	# Run pySim-prog integration tests (requires physical cards)
 	cd tests/pySim-prog_test/
         ./pySim-prog_test.sh
