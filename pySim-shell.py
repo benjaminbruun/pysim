@@ -45,7 +45,7 @@ import sys
 import inspect
 from pathlib import Path
 from io import StringIO
-
+from datetime import datetime
 from pprint import pprint as pp
 
 from osmocom.utils import h2b, b2h, i2h, swap_nibbles, rpad, JsonEncoder, is_hexstr, is_decimal
@@ -109,6 +109,9 @@ Online manual available at https://downloads.osmocom.org/docs/pysim/master/html/
         self.py_locals = {'card': self.card, 'rs': self.rs, 'lchan': self.lchan}
         self.sl = sl
         self.ch = ch
+        self.timestamp_startup = datetime.utcnow()
+        self.timestamp_last_reset = self.timestamp_startup
+        self.timestamp_last_check = self.timestamp_startup
 
         self.numeric_path = False
         self.conserve_write = True
@@ -461,6 +464,21 @@ Online manual available at https://downloads.osmocom.org/docs/pysim/master/html/
                              (success_count, fail_count))
 
             first = False
+
+    time_parser = argparse.ArgumentParser()
+    time_parser.add_argument('--reset', help='reset time counter', action='store_true')
+
+    @cmd2.with_argparser(time_parser)
+    @cmd2.with_category(CUSTOM_CATEGORY)
+    def do_time(self, opts):
+        """Print elapsed time"""
+        timestamp_now = datetime.utcnow()
+        if opts.reset:
+            self.timestamp_last_reset = timestamp_now
+        self.poutput("elapsed time in total: " + str(timestamp_now-self.timestamp_startup))
+        self.poutput("elapsed time since last check: " + str(timestamp_now-self.timestamp_last_check))
+        self.timestamp_last_check = timestamp_now
+        self.poutput("elapsed time since last reset: " + str(timestamp_now-self.timestamp_last_reset))
 
     echo_parser = argparse.ArgumentParser()
     echo_parser.add_argument('STRING', help="string to echo on the shell", nargs='+')
