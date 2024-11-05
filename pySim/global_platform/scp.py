@@ -275,23 +275,24 @@ class SCP02(SCP):
 
     def _wrap_cmd_apdu(self, apdu: bytes, *args, **kwargs) -> bytes:
         """Wrap Command APDU for SCP02: calculate MAC and encrypt."""
-        lc = len(apdu) - 5
-        assert len(apdu) >= 5, "Wrong APDU length: %d" % len(apdu)
-        assert len(apdu) == 5 or apdu[4] == lc, "Lc differs from length of data: %d vs %d" % (apdu[4], lc)
-
         logger.debug("wrap_cmd_apdu(%s)", b2h(apdu))
-
-        cla = apdu[0]
-        b8 = cla & 0x80
-        if cla & 0x03 or cla & CLA_SM:
-            # nonzero logical channel in APDU, check that are the same
-            assert cla == self._cla(False, b8), "CLA mismatch"
-        # CLA without log. channel can be 80 or 00 only
         if self.do_cmac:
+            lc = len(apdu) - 5
+            assert len(apdu) >= 5, "Wrong APDU length: %d" % len(apdu)
+            assert len(apdu) == 5 or apdu[4] == lc, "Lc differs from length of data: %d vs %d" % (apdu[4], lc)
+
+            # CLA without log. channel can be 80 or 00 only
+            cla = apdu[0]
+            b8 = cla & 0x80
+            if cla & 0x03 or cla & CLA_SM:
+                # nonzero logical channel in APDU, check that are the same
+                assert cla == self._cla(False, b8), "CLA mismatch"
+
             if self.mac_on_unmodified:
                 mlc = lc
                 clac = cla
-            else:                      # CMAC on modified APDU
+            else:
+                # CMAC on modified APDU
                 mlc = lc + 8
                 clac = cla | CLA_SM
             mac = self.sk.calc_mac_1des(bytes([clac]) + apdu[1:4] + bytes([mlc]) + apdu[5:])
@@ -301,8 +302,10 @@ class SCP02(SCP):
                 lc = len(data)
             else:
                 data = apdu[5:]
+
             lc += 8
             apdu = bytes([self._cla(True, b8)]) + apdu[1:4] + bytes([lc]) + data + mac
+
         return apdu
 
     def unwrap_rsp_apdu(self, sw: bytes, rsp_apdu: bytes) -> bytes:
@@ -475,30 +478,30 @@ class SCP03(SCP):
 
     def _wrap_cmd_apdu(self, apdu: bytes, skip_cenc: bool = False) -> bytes:
         """Wrap Command APDU for SCP03: calculate MAC and encrypt."""
-        cla = apdu[0]
-        ins = apdu[1]
-        p1 = apdu[2]
-        p2 = apdu[3]
-        lc = apdu[4]
-        assert lc == len(apdu) - 5
-        cmd_data = apdu[5:]
-
-        if self.do_cenc and not skip_cenc:
-            assert self.do_cmac
-            if lc == 0:
-                # No encryption shall be applied to a command where there is no command data field. In this
-                # case, the encryption counter shall still be incremented
-                self.sk.block_nr += 1
-            else:
-                # data shall be padded as defined in [GPCS] section B.2.3
-                padded_data = pad80(cmd_data, 16)
-                lc = len(padded_data)
-                if lc >= 256:
-                    raise ValueError('Modified Lc (%u) would exceed maximum when appending padding' % (lc))
-                # perform AES-CBC with ICV + S_ENC
-                cmd_data = self.sk._encrypt(padded_data)
-
+        logger.debug("wrap_cmd_apdu(%s)", b2h(apdu))
         if self.do_cmac:
+            cla = apdu[0]
+            ins = apdu[1]
+            p1 = apdu[2]
+            p2 = apdu[3]
+            lc = apdu[4]
+            assert lc == len(apdu) - 5
+            cmd_data = apdu[5:]
+
+            if self.do_cenc and not skip_cenc:
+                if lc == 0:
+                    # No encryption shall be applied to a command where there is no command data field. In this
+                    # case, the encryption counter shall still be incremented
+                    self.sk.block_nr += 1
+                else:
+                    # data shall be padded as defined in [GPCS] section B.2.3
+                    padded_data = pad80(cmd_data, 16)
+                    lc = len(padded_data)
+                    if lc >= 256:
+                        raise ValueError('Modified Lc (%u) would exceed maximum when appending padding' % (lc))
+                    # perform AES-CBC with ICV + S_ENC
+                    cmd_data = self.sk._encrypt(padded_data)
+
             # The length of the command message (Lc) shall be incremented by 8 (in S8 mode) or 16 (in S16
             # mode) to indicate the inclusion of the C-MAC in the data field of the command message.
             mlc = lc + self.s_mode
