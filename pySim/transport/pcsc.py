@@ -93,13 +93,22 @@ class PcscSimLink(LinkBaseTpdu):
             self._con.connect()
             atr = ATR(self._con.getATR())
             if atr.isT0Supported():
-                self._con.setProtocol(CardConnection.T0_protocol)
-                self.set_tpdu_format(0)
+                protocol = CardConnection.T0_protocol
+                tpdu_format = 0
             elif atr.isT1Supported():
-                self._con.setProtocol(CardConnection.T1_protocol)
-                self.set_tpdu_format(1)
+                protocol = CardConnection.T1_protocol
+                tpdu_format = 1
             else:
                 raise ReaderError('Unsupported card protocol')
+            # pyscard's setProtocol() only sets a local default used by later
+            # transmit() calls; it does not renegotiate the already-open PC/SC
+            # handle, which can be left on the "auto" protocol from the initial
+            # connect() above (unreliable on some platforms, see issue #6952).
+            # Reconnect with the chosen protocol explicitly so the handle itself
+            # is negotiated to it.
+            self._con.disconnect()
+            self._con.connect(protocol)
+            self.set_tpdu_format(tpdu_format)
         except CardConnectionException as exc:
             raise ProtocolError() from exc
         except NoCardException as exc:
