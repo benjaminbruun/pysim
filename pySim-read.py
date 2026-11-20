@@ -98,7 +98,8 @@ if __name__ == '__main__':
 
     # Testing for Classic SIM or UICC
     (res, sw) = sl.send_apdu(scc.cla_byte + "a4" + scc.sel_ctrl + "02" + "3f00" + "00")
-    if sw == '6e00':
+    is_uicc = (sw != '6e00')
+    if not is_uicc:
         # Just a Classic SIM
         scc.cla_byte = "a0"
         scc.sel_ctrl = "0000"
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     print("Reading ...")
 
     # Initialize Card object by auto detecting the card
-    card = card_detect("auto", scc) or SimCard(scc)
+    card = card_detect("auto", scc) or (UsimCard(scc) if is_uicc else SimCard(scc))
 
     # Read all AIDs on the UICC
     card.read_aids()
